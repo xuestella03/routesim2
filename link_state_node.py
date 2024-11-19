@@ -18,15 +18,12 @@ class Link_State_Node(Node):
         return f"id: {self.id}\ndb: {self.lsdb}\nrouting table: {self.routing_table}"
 
     def link_has_been_updated(self, neighbor, latency):
+
         cur_link = frozenset([self.id, neighbor])
         # update sequence number
-        # if cur_link in self.lsdb:
-        #     seq_num = self.lsdb.get(cur_link)[1] + 1
-        # else:
-        #     seq_num = 0
         seq_num = self.lsdb.get(cur_link, (0, -1))[1] + 1
 
-        if latency == -1:
+        if latency == -1: # delete
             if cur_link in self.lsdb:
                 del self.lsdb[cur_link]
                 if neighbor in self.neighbors:
@@ -42,8 +39,8 @@ class Link_State_Node(Node):
                 message = f"{self.id},{src},{dst},{cost},{seq}"
                 self.send_to_neighbor(neighbor, message)
 
+        # update other neighbors
         message = f"{self.id},{min(self.id, neighbor)},{max(self.id, neighbor)},{latency},{seq_num}"
-
         for n in self.neighbors:
             if n != neighbor:
                 self.send_to_neighbor(n, message)
@@ -59,20 +56,17 @@ class Link_State_Node(Node):
         seq_num = int(seq_num)
 
         link = frozenset([link_src, link_dst])
-        # if link in self.lsdb:
-        #     cur_seq = self.lsdb.get(link)[1]
-        # else:
-        #     cur_seq = 0
+
         cur_seq = self.lsdb.get(link, (0, -1))[1]
 
-        if seq_num > cur_seq:
+        if seq_num > cur_seq: # the message is newer info so we need to update
             self.lsdb[link] = (cost, seq_num)
             for n in self.neighbors:
                 if n != src:
                     self.send_to_neighbor(n, m)
             self.dijsktra()
 
-        elif seq_num < cur_seq:
+        elif seq_num < cur_seq: # the info from the message is outdated so we need to update the sender
             message = f"{self.id},{min(link_src, link_dst)},{max(link_src, link_dst)},{self.lsdb[link][0]},{self.lsdb[link][1]}"
             self.send_to_neighbor(src, message)
 
@@ -82,9 +76,7 @@ class Link_State_Node(Node):
     def dijsktra(self):
 
         distances = {self.id: 0}
-        # distances[self.id] = 0
         prev = {self.id: 0}
-        # prev[self.id] = None
         unvisited = set()
 
         graph = {}
@@ -102,12 +94,14 @@ class Link_State_Node(Node):
         unvisited.add(self.id)
 
         while unvisited:
+            # get closest
             cur = min((node for node in unvisited if node in distances), key=lambda x: distances[x], default=None)
             if cur is None:
                 break
             unvisited.remove(cur)
             cur_dist = distances[cur]
 
+            # update distances
             if cur in graph:
                 for n, c in graph[cur].items():
                     new_dist = cur_dist + c
@@ -115,6 +109,7 @@ class Link_State_Node(Node):
                         distances[n] = new_dist
                         prev[n] = cur
 
+        # backtrack
         self.routing_table = {}
         for d in distances:
             if d != self.id:
