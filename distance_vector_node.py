@@ -112,10 +112,10 @@ class Distance_Vector_Node(Node):
         self.next_hop[id] = id
 
     def __str__(self):
-        return f"Node {self.id}\nDistances: {self.distances}\nNext hops: {self.next_hop}"
+        return f"id: {self.id}\ndistances: {self.distances}\nnext hops: {self.next_hop}"
 
     def link_has_been_updated(self, neighbor, latency):
-        """Handle link updates by updating costs and recalculating distances"""
+
         # Update neighbor latency
         changed = False
 
